@@ -869,10 +869,10 @@ class CUDAGraphNode:
             self.recorded_liveness_before_graph = curr_liveness
             self.expected_dead_indices_before_graph = different_indices
 
-        recording_inputs = self._allocate_and_copy_recording_inputs(inputs)
+        recording_inputs = inputs #self._allocate_and_copy_recording_inputs(inputs)
         # recording inputs will copy over memory, so we can free non recording inputs
-        inputs.clear()
-        del inputs
+        #inputs.clear()
+        #del inputs
 
         # graph used for recording model invocation
         self.graph: Optional[torch.cuda.CUDAGraph] = torch.cuda.CUDAGraph()
@@ -883,12 +883,13 @@ class CUDAGraphNode:
         # we reconstruct tensors at the correct data pointers of our inputs which are
         # non owning and do not prevent deallocation. On subsequent executions, input values
         # will be copied over to these tensors.
-        self.reconstructed_inputs: InputList[Union[Tensor, int]] = [
-            self._reconstruct_from_tensor_metadata(self._tensor_metadata(x))
-            if isinstance(x, torch.Tensor)
-            else x
-            for x in recording_inputs
-        ]
+        #self.reconstructed_inputs: InputList[Union[Tensor, int]] = [
+        #    self._reconstruct_from_tensor_metadata(self._tensor_metadata(x))
+        #    if isinstance(x, torch.Tensor)
+        #    else x
+        #    for x in recording_inputs
+        #]
+        self.reconstructed_inputs = inputs
 
         # DO THE RECORDING!!!
         # We record the CUDA graph in the constructor of CUDAGraphNode, which
@@ -997,8 +998,8 @@ class CUDAGraphNode:
     def run(self, new_inputs):
         self.check_static_inputs_are_stable(new_inputs)
 
-        self._copy_inputs_and_remove_from_src(self.reconstructed_inputs, new_inputs)
-        new_inputs.clear()
+#        self._copy_inputs_and_remove_from_src(self.reconstructed_inputs, new_inputs)
+#        new_inputs.clear()
 
         self.run_graph()
 
@@ -1137,7 +1138,7 @@ class CUDAGraphNode:
             )
         }
 
-        if config.triton.slow_path_cudagraph_asserts:
+        if False:#config.triton.slow_path_cudagraph_asserts:
             # need to use parent live weakrefs because live_indices isnt set yet
             memory = (
                 [] if self.parent is None else list(self.parent.path_live_weakrefs())
