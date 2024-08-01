@@ -391,7 +391,7 @@ inline void bgemm_internal_cublaslt(CUDABLAS_BGEMM_ARGTYPES(Dtype)) {
   auto workspace = allocator.allocate(workspaceSize);
   TORCH_CHECK(workspace.get() != nullptr, "OOM trying to allocate workspace for cublaslt");
 
-  cublasLtMatmulHeuristicResult_t heuristicResult = {};
+  cublasLtMatmulHeuristicResult_t heuristicResults[8];
   int returnedResult = 0;
   TORCH_CUDABLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
       ltHandle,
@@ -401,8 +401,8 @@ inline void bgemm_internal_cublaslt(CUDABLAS_BGEMM_ARGTYPES(Dtype)) {
       Cdesc.descriptor(),
       Cdesc.descriptor(),
       preference.descriptor(),
-      1,
-      &heuristicResult,
+      8,
+      heuristicResults,
       &returnedResult));
   if (returnedResult == 0) {
     TORCH_CUDABLAS_CHECK(CUBLAS_STATUS_NOT_SUPPORTED);
@@ -421,7 +421,7 @@ inline void bgemm_internal_cublaslt(CUDABLAS_BGEMM_ARGTYPES(Dtype)) {
       Cdesc.descriptor(),
       c,
       Cdesc.descriptor(),
-      &heuristicResult.algo,
+      &heuristicResults[0].algo,
       workspace.mutable_get(),
       workspaceSize,
       at::cuda::getCurrentCUDAStream());
