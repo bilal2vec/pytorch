@@ -5,31 +5,37 @@ from itertools import product
 import torch
 
 
-sizes = [4096, 6144, 8192, 14336]
-batch_sizes = [2]
+#bmnks = [(2, 4096, 4096, 8192)]
+bmnks = [(3, 6144, 4096, 8192)]
 
 problems = {}
 percent_speedups = []
 
-for i in range(2):
+for i in range(10):
     for backend in ["cublas", "cublaslt"]:
         problems[backend] = {}
         torch.backends.cuda.preferred_blas_library(backend)
 
-        for (b, m, n, k) in product(batch_sizes, sizes, sizes, sizes):
-            x = torch.ones((b, m, k), dtype=torch.bfloat16, device='cuda')
-            y = torch.ones((b, k, n), dtype=torch.bfloat16, device='cuda')
+        for (b, m, n, k) in bmnks:
+            #x = torch.ones((b*m, k), dtype=torch.bfloat16, device='cuda')
+            #y = torch.ones((k, b*n), dtype=torch.bfloat16, device='cuda')
+            x = torch.ones((b * k, m), dtype=torch.bfloat16, device='cuda')
+            y = torch.ones((b * k, n), dtype=torch.bfloat16, device='cuda')
+            #x = torch.ones((m, b * k), dtype=torch.bfloat16, device='cuda')
+            #y = torch.ones((b * k, n), dtype=torch.bfloat16, device='cuda')
+
 
             for _ in range(5):
-                z = torch.matmul(x, y)
+                #z = torch.matmul(x, y)
+                z = torch.matmul(x.mT, y)
 
             torch.cuda.synchronize()
 
             times = []
-
             for _ in range(10):
                 start = time.time()
-                z = torch.matmul(x, y)
+                #z = torch.matmul(x, y)
+                z = torch.matmul(x.mT, y)
                 torch.cuda.synchronize()
                 times.append(time.time() - start)
 
@@ -51,5 +57,6 @@ for i in range(2):
                 percent_speedup = 0
     
             print(f'{problem}: \t {us:.2f} (+-{stddev:.2f}) % speedup: {percent_speedup:.2f} ({cublas_time - us:.2f} us) tflops: {tflops:.2f} power: {power:.2f}')
+            print()
 
 print(f'avg percent speedup: {sum(percent_speedups) / len(percent_speedups):.2f}')
