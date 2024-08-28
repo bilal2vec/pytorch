@@ -10,9 +10,9 @@ reference = {True: {}, False: {}}
 
 for _ in range(3):
     for (b, m, n, k) in bmnks:
-        x = torch.ones((b, m, k), dtype=torch.bfloat16, device='cuda')
-        w = torch.ones((k, n), dtype=torch.bfloat16, device='cuda')
-        out = torch.ones((b, m, n), dtype=torch.bfloat16, device='cuda')
+        x = torch.arange(b*m*k, dtype=torch.bfloat16, device='cuda').view((b, m, k)).contiguous()
+        w = torch.arange(k*n, dtype=torch.bfloat16, device='cuda').view((k, n)).contiguous()
+        out = torch.arange(b*m*n, dtype=torch.bfloat16, device='cuda').view((b, m, n)).contiguous()
 
         for tunable_op_enabled in [False, True]:
             torch.cuda.tunable.enable(tunable_op_enabled)           
@@ -39,6 +39,7 @@ for _ in range(3):
                 reference[tunable_op_enabled][problem] = z
 
                 if tunable_op_enabled:
+                    print(torch.max(reference[False][problem] - reference[True][problem]))
                     assert(torch.allclose(reference[False][problem], reference[True][problem]))
                     speedup = problems[False][problem] / problems[True][problem]
 
